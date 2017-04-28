@@ -1,8 +1,6 @@
-cacheblejs.namespace("cacheblejs");
-
-actions = (function() {
-/** START STORAGE */
-	this.isLocalStorageActivated = function(){
+var cacheblejs = function(){
+	/** checks if the localStorage is activated/available  */
+	var _isLocalStorageActivated = function(){
 		if (typeof localStorage !== 'undefined') {
 		    try {
 		        localStorage.setItem('feature_test', 'yes');
@@ -16,8 +14,10 @@ actions = (function() {
 		}
 		return false;
 	};
-	this.setStoredLocalValue = function(namespace, k, v){
-		var storedJsonVal = getStoredLocalValue(namespace);
+	
+	/** Save the giving value in item if localStorage is activated, otherwise in a cookie	 */
+	var _setStateValue = function(namespace, k, v){
+		var storedJsonVal = _getStateValue(namespace);
 		if (storedJsonVal){
 			storedJsonVal[k] = v;
 		}else {
@@ -25,39 +25,39 @@ actions = (function() {
 			storedJsonVal[k] = v;
 		}
 		
-		// if LocalStorage is not available then use cookies
-		if(!isLocalStorageActivated){
-			// update cookie
-			var path = '/' + digimind.application.settings.rootContext + '/' + digimind.application.settings.digiClient + '/';
+		if(_isLocalStorageActivated){
+			localStorage.setItem(namespace, JSON.stringify(storedJsonVal));
+		} else{// if LocalStorage is NOT available then use cookies
+			var path = '/';
 			var date = new Date();
 	        date.setTime(date.getTime() + (360*24*60*60*1000));
 			var document_cookie = namespace + "=" + JSON.stringify(storedJsonVal) + "; expires=" + date.toUTCString() + "; path=" + path;
 			document.cookie = document_cookie;
-			return document_cookie;
-		} else{
-			localStorage.setItem(namespace, JSON.stringify(storedJsonVal));
+			return document_cookie;			
 		}
+		return storedJsonVal;
 	};
-	this.getStoredLocalValue = function(namespace, k){
+	/** Get the giving value in item if localStorage is activated, otherwise set it in a cookie	 */
+	var _getStateValue = function(namespace, k){
 		var jsonVal = new Array();
-		// if LocalStorage is not available then check cookies
-		if(!isLocalStorageActivated){
-			var coukie = document.cookie.match('(^|;)\\s*' + namespace + '\\s*=\\s*([^;]+)');
-			if(coukie){ 
-				jsonVal = JSON.parse(coukie.pop());
-			}
-		} else{
+
+		if(_isLocalStorageActivated){
 			var storedVal = localStorage.getItem(namespace);
 			if(storedVal){
 				jsonVal = JSON.parse(storedVal);
 			} else {
 				return {};
 			}
+		} else{ // if LocalStorage is not available then check cookies
+			var coukie = document.cookie.match('(^|;)\\s*' + namespace + '\\s*=\\s*([^;]+)');
+			if(coukie){ 
+				jsonVal = JSON.parse(coukie.pop());
+			}
 		}
 
 		return jsonVal[k];
 	};
-	/** END STORAGE */
-  
-  return this;
-  })();
+	
+	/** return the functions to expose */
+	return { setStateValue: _setStateValue, getStateValue: _getStateValue };
+}();/** End of stateStorage */
